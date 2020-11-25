@@ -1,47 +1,55 @@
 package pos.machine;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 public class Receipt {
-    private List<String> barcodes;
-    private Map<String, ItemInfo> itemsDetail;
+    private final AllBarcodes allBarcodesInReceipt;
+    private final List<ReceiptItem> receiptItems;
 
-    final String receiptHeader = "***<store earning no money>Receipt***\n";
+    static final String RECEIPT_HEADER = "***<store earning no money>Receipt***\n";
 
-    public Receipt(List<String> barcodes) {
-        this.barcodes = barcodes;
-        List<ItemInfo> itemInfos = ItemDataLoader.loadAllItemInfos();
-        itemInfos.stream().filter(itemInfo -> barcodes.contains(itemInfo.getBarcode())).forEach(itemInfo -> itemsDetail.put(itemInfo.getBarcode(), itemInfo));
+    public Receipt(List<String> allBarcodesInReceipt) {
+        this.allBarcodesInReceipt = new AllBarcodes(allBarcodesInReceipt);
+        this.receiptItems = createReceiptItems();
     }
 
     public String generateReceipt() {
-
-        String receipt = receiptHeader;
-        List<String> distinctBarcodes = barcodes.stream().distinct().collect(Collectors.toList());
-        List<QuantifiedItem> quantifiedItems = distinctBarcodes.stream().map(distinctBarcode -> {
-                int frequency = Collections.frequency(barcodes, distinctBarcode);
-                return new QuantifiedItem(itemsDetail.get(distinctBarcode), frequency);
-            }
-        ).collect(Collectors.toList());
-        List receiptLines = quantifiedItems.stream().map(quantifiedItem -> quantifiedItem.generateReceiptLine()).collect(Collectors.toList());
-        receipt += String.join("\n", receiptLines);
-        receipt += generateReceiptFooter(quantifiedItems);
+        String receipt = RECEIPT_HEADER;
+        List<String> receiptItemLines = receiptItems.stream().map(ReceiptItem::generateReceiptLine).collect(Collectors.toList());
+        receipt += String.join("\n", receiptItemLines);
+        receipt += generateReceiptFooter();
         return receipt;
     }
 
-    private String generateReceiptFooter(List<QuantifiedItem> quantifiedItems) {
-        Integer total = calculateTotal(quantifiedItems);
-        return String.format(
-                "----------------------\n" +
-                        "Total: %d (yuan)\n" +
-                        "**********************", total);
+    private Map<String, ItemInfo> createBarcodeToItemInfoMap() {
+        Map<String, ItemInfo> barcodeToItemInfoMap = new HashMap<>();
+        List<ItemInfo> itemInfos = ItemDataLoader.loadAllItemInfos();
+        itemInfos.forEach(itemInfo -> barcodeToItemInfoMap.put(itemInfo.getBarcode(), itemInfo));
+        return barcodeToItemInfoMap;
     }
 
-    private Integer calculateTotal(List<QuantifiedItem> quantifiedItems) {
-        return quantifiedItems.stream().map(quantifiedItem -> quantifiedItem.getSubtotal()).reduce(0, Integer::sum);
+    private List<ReceiptItem> createReceiptItems() {
+        Map<String, ItemInfo> itemsDetail = createBarcodeToItemInfoMap();
+        List<String> distinctBarcodes = allBarcodesInReceipt.getDistinctBarcodes();
+        return distinctBarcodes.stream().map(distinctBarcode ->
+                new ReceiptItem(itemsDetail.get(distinctBarcode), allBarcodesInReceipt.quantityOf(distinctBarcode)))
+                .collect(Collectors.toList());
+    }
+
+    private String generateReceiptFooter() {
+        Integer total = calculateTotal();
+        return String.format(
+                "\n" +
+                "----------------------\n" +
+                "Total: %d (yuan)\n" +
+                "**********************", total);
+    }
+
+    private Integer calculateTotal() {
+        return receiptItems.stream().map(ReceiptItem::getSubtotal).reduce(0, Integer::sum);
     }
 
 }
