@@ -1,9 +1,10 @@
 package pos.machine;
 
-import java.util.List;
+import java.util.*;
 
 public class PosMachine {
     public String printReceipt(List<String> barcodes) {
-        return null;
+        Receipt receipt = new Receipt(barcodes);
+        return receipt.generateReceipt();
     }
 }
