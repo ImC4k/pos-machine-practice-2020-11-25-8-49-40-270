@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class AllBarcodes extends ArrayList<String> {
+public class AllBarcodes {
     private final List<String> barcodes;
 
     public AllBarcodes(List<String> barcodes) {
