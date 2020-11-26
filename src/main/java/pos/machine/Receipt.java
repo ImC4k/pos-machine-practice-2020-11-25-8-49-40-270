@@ -1,19 +1,30 @@
 package pos.machine;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class Receipt {
-    private final AllBarcodes allBarcodesInReceipt;
     private final List<ReceiptItem> receiptItems;
 
     static final String RECEIPT_HEADER = "***<store earning no money>Receipt***\n";
+    static final String RECEIPT_FOOTER_TEMPLATE =
+            "\n" +
+            "----------------------\n" +
+            "Total: %d (yuan)\n" +
+            "**********************";
 
     public Receipt(List<String> allBarcodesInReceipt) {
-        this.allBarcodesInReceipt = new AllBarcodes(allBarcodesInReceipt);
-        this.receiptItems = createReceiptItems();
+        this.receiptItems = createReceiptItems(allBarcodesInReceipt);
+    }
+
+    private List<ReceiptItem> createReceiptItems(List<String> allBarcodesInReceipt) {
+        AllBarcodes allBarcodes = new AllBarcodes(allBarcodesInReceipt);
+        AllItemInfosInReceipt allItemInfosInReceipt = new AllItemInfosInReceipt(allBarcodes.getDistinctBarcodes());
+
+        List<String> distinctBarcodes = allBarcodes.getDistinctBarcodes();
+        return distinctBarcodes.stream().map(distinctBarcode ->
+                new ReceiptItem(allItemInfosInReceipt.get(distinctBarcode), allBarcodes.quantityOf(distinctBarcode)))
+                .collect(Collectors.toList());
     }
 
     public String generateReceipt() {
@@ -24,28 +35,9 @@ public class Receipt {
         return receipt;
     }
 
-    private Map<String, ItemInfo> createBarcodeToItemInfoMap() {
-        Map<String, ItemInfo> barcodeToItemInfoMap = new HashMap<>();
-        List<ItemInfo> itemInfos = ItemDataLoader.loadAllItemInfos();
-        itemInfos.forEach(itemInfo -> barcodeToItemInfoMap.put(itemInfo.getBarcode(), itemInfo));
-        return barcodeToItemInfoMap;
-    }
-
-    private List<ReceiptItem> createReceiptItems() {
-        Map<String, ItemInfo> itemsDetail = createBarcodeToItemInfoMap();
-        List<String> distinctBarcodes = allBarcodesInReceipt.getDistinctBarcodes();
-        return distinctBarcodes.stream().map(distinctBarcode ->
-                new ReceiptItem(itemsDetail.get(distinctBarcode), allBarcodesInReceipt.quantityOf(distinctBarcode)))
-                .collect(Collectors.toList());
-    }
-
     private String generateReceiptFooter() {
         Integer total = calculateTotal();
-        return String.format(
-                "\n" +
-                "----------------------\n" +
-                "Total: %d (yuan)\n" +
-                "**********************", total);
+        return String.format(RECEIPT_FOOTER_TEMPLATE, total);
     }
 
     private Integer calculateTotal() {

@@ -12,7 +12,8 @@ public class ReceiptItem {
     }
 
     public String generateReceiptLine() {
-        return String.format("Name: %s, Quantity: %d, Unit price: %d (yuan), Subtotal: %d (yuan)", itemInfo.getName(), quantity, itemInfo.getPrice(), subtotal);
+        return String.format("Name: %s, Quantity: %d, Unit price: %d (yuan), Subtotal: %d (yuan)",
+                itemInfo.getName(), quantity, itemInfo.getPrice(), subtotal);
     }
 
     public Integer getSubtotal() {
